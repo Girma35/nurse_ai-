@@ -16,6 +16,64 @@ The main user-facing product is a Kotlin Android app built with Jetpack Compose.
 
 The web app is a Next.js dashboard deployed on Vercel. It exists for demo access, judge evaluation, and data visualization. It is not intended to be the full product experience.
 
+## Repository Layout
+
+```text
+apps/
+  mobile/        Android app skeleton for the offline-first mobile product
+  web/           Next.js dashboard for Vercel demos and visualization
+packages/
+  shared/        Shared TypeScript health models and scoring helpers
+infra/
+  dynamodb/      DynamoDB table definition for sync records
+```
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js 22 or newer
+- npm 10 or newer
+- Android Studio for the mobile app
+- Android SDK 35 for the current Android scaffold
+
+### Install Dependencies
+
+```bash
+npm install
+```
+
+### Run the Web Dashboard
+
+```bash
+npm run dev:web
+```
+
+The dashboard runs from `apps/web` and uses mock health data until the backend API is connected.
+
+### Build the Web Dashboard
+
+```bash
+npm run build:web
+```
+
+### Run the Android App
+
+1. Open `apps/mobile` in Android Studio.
+2. Let Android Studio sync the Gradle project.
+3. Confirm the Android SDK path in `local.properties`.
+4. Run the `app` configuration on an emulator or device.
+
+The mobile scaffold includes Compose screens, Room entities, a DAO, a local rules engine starter, and a WorkManager sync worker placeholder.
+
+## Deployment
+
+The repository includes `vercel.json` at the root. Vercel should install dependencies with `npm install` and build the dashboard with:
+
+```bash
+npm run build:web
+```
+
 ## Mobile App
 
 ### Tech Stack
