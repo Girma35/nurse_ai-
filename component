@@ -1,0 +1,514 @@
+# Nursy AI Component and Phase Plan
+
+## Guide Analysis
+
+Nursy AI is an offline-first health companion. The mobile app is the primary
+product, and the web app is a secondary dashboard for demos, evaluation, and
+visualization.
+
+The main product promise is:
+
+```text
+Everything works offline first, then syncs to cloud intelligence.
+```
+
+That means the build should prioritize local mobile data capture, local storage,
+local rules, and background sync before advanced cloud intelligence.
+
+Key product priorities from the guide:
+
+- Mobile app is the daily user experience.
+- Web app is a lightweight dashboard, not the full product.
+- Room DB is the mobile source of truth while offline.
+- WorkManager handles background sync when network access is available.
+- DynamoDB stores synced cloud records.
+- Local AI handles simple health rules on-device.
+- Cloud AI handles deeper trend analysis and weekly reports later.
+
+## Current Repository Components
+
+The repository already has these starting points:
+
+- `apps/mobile`: Android app skeleton.
+- `apps/mobile/app/src/main/java/com/nursyai/data/local`: Room database, DAO,
+  and local entities.
+- `apps/mobile/app/src/main/java/com/nursyai/ai/LocalRulesEngine.kt`: starter
+  local rules engine.
+- `apps/mobile/app/src/main/java/com/nursyai/sync/HealthSyncWorker.kt`: starter
+  sync worker.
+- `apps/web`: Next.js dashboard.
+- `apps/web/src/components`: web dashboard components.
+- `apps/web/src/lib/mock-data.ts`: mock dashboard data.
+- `packages/shared`: shared TypeScript models and scoring helpers.
+- `infra/dynamodb`: DynamoDB table definition for synced records.
+
+## System Components
+
+### 1. Mobile App Shell
+
+Purpose: provide the main Android user experience.
+
+Responsibilities:
+
+- Jetpack Compose navigation.
+- Main dashboard screen.
+- Form screens for check-ins, symptoms, medications, and profile data.
+- Offline-first user flows.
+- Emergency health card access.
+
+Initial deliverables:
+
+- App navigation structure.
+- Dashboard screen.
+- Daily check-in screen.
+- Symptom log screen.
+- Medication screen.
+- Emergency card screen.
+
+### 2. Authentication and Profile
+
+Purpose: identify the user and store personal health context.
+
+Responsibilities:
+
+- Email signup and login.
+- User profile.
+- Health profile fields: age, gender, weight, height, blood type, allergies,
+  chronic conditions, and emergency contacts.
+- Local persistence for profile data.
+- Sync profile updates to cloud.
+
+Initial deliverables:
+
+- Local profile entity.
+- Profile edit screen.
+- Profile DAO methods.
+- Profile sync record format.
+
+### 3. Daily Health Check-In
+
+Purpose: capture daily health state.
+
+Responsibilities:
+
+- Mood level.
+- Energy level from 1 to 10.
+- Sleep hours and sleep quality.
+- Stress level.
+- Water intake.
+- Free-text notes.
+- Date-based history.
+
+Initial deliverables:
+
+- Daily check-in form.
+- Room entity and DAO methods.
+- Health score input mapping.
+- Dashboard summary card.
+
+### 4. Symptom Tracking
+
+Purpose: track health symptoms over time.
+
+Responsibilities:
+
+- Add symptoms such as headache, fever, fatigue, nausea, cough, or pain.
+- Track severity from 1 to 5.
+- Track duration.
+- Add notes.
+- Show date-based symptom history.
+- Mark active and resolved symptoms.
+
+Initial deliverables:
+
+- Symptom entry form.
+- Symptom history list.
+- Active symptoms summary.
+- Local rule hooks for repeated symptom detection.
+
+### 5. Medication Management
+
+Purpose: help users track medication schedules and adherence.
+
+Responsibilities:
+
+- Add medication name, dose, frequency, and schedule.
+- Track taken and missed doses.
+- Calculate adherence score.
+- Trigger reminder notifications.
+
+Initial deliverables:
+
+- Medication entity improvements.
+- Medication list and edit screens.
+- Dose event tracking.
+- Adherence score helper.
+- Notification scheduling hook.
+
+### 6. Health Dashboard
+
+Purpose: summarize the user's current health status.
+
+Responsibilities:
+
+- Health score from 0 to 100.
+- Today's check-in summary.
+- Active symptoms.
+- Medication status.
+- Quick local insights.
+- Sync status.
+
+Initial deliverables:
+
+- Compose dashboard.
+- Health score calculation.
+- Insight list from local rules.
+- Sync status display.
+
+### 7. Health Timeline
+
+Purpose: show chronological health history.
+
+Responsibilities:
+
+- Combine check-ins, symptoms, medication events, and insight events.
+- Group records by date.
+- Support simple filtering.
+- Prepare data for future reports.
+
+Initial deliverables:
+
+- Timeline query model.
+- Timeline screen.
+- Date grouping helper.
+
+### 8. AI Symptom Journal
+
+Purpose: convert natural language health notes into structured records.
+
+Responsibilities:
+
+- Accept text input such as "I feel tired and have headache for 3 days".
+- Extract possible symptoms.
+- Extract duration when present.
+- Suggest severity when possible.
+- Confirm before saving structured data.
+
+Initial deliverables:
+
+- Text journal screen.
+- Local keyword parser.
+- Review-and-save flow.
+- Symptom auto-log integration.
+
+### 9. Local AI Health Insights
+
+Purpose: provide useful offline health guidance without cloud access.
+
+Responsibilities:
+
+- Detect repeated symptoms.
+- Warn about low sleep plus fatigue.
+- Surface medication missed-dose patterns.
+- Generate simple dashboard insights.
+
+Initial deliverables:
+
+- Expand `LocalRulesEngine.kt`.
+- Unit tests for local rules.
+- Insight model.
+- Dashboard insight rendering.
+
+### 10. Emergency Health Card
+
+Purpose: keep critical medical information available offline.
+
+Responsibilities:
+
+- Show name, blood type, allergies, chronic conditions, and emergency contacts.
+- Provide one-tap access from the mobile app.
+- Work without login refresh or network access.
+
+Initial deliverables:
+
+- Emergency card data model.
+- Emergency card screen.
+- Fast navigation entry point.
+
+### 11. Notifications
+
+Purpose: remind users about important health actions.
+
+Responsibilities:
+
+- Medication reminders.
+- Daily check-in reminders.
+- Hydration reminders.
+- Appointment alerts.
+
+Initial deliverables:
+
+- Notification permission handling.
+- Reminder scheduler.
+- Medication reminder integration.
+- Check-in reminder integration.
+
+### 12. Offline Storage
+
+Purpose: make the mobile app fully usable without connectivity.
+
+Responsibilities:
+
+- Store all user-entered health data in Room DB.
+- Track record creation and update timestamps.
+- Track dirty or pending-sync state.
+- Preserve local data as source of truth.
+
+Initial deliverables:
+
+- Room schema review.
+- Pending sync fields.
+- Migration strategy.
+- DAO methods for unsynced records.
+
+### 13. Sync Engine
+
+Purpose: sync local Room records to cloud storage when internet is available.
+
+Responsibilities:
+
+- Use WorkManager for background sync.
+- Push local changes to DynamoDB.
+- Pull cloud changes when needed.
+- Resolve conflicts safely.
+- Retry failed sync jobs.
+
+Initial deliverables:
+
+- Sync queue model.
+- DynamoDB record mapper.
+- Retrofit API client or backend API contract.
+- Conflict metadata: `updatedAt`, `deviceId`, and `syncVersion`.
+- Sync status reporting.
+
+### 14. Cloud Backend
+
+Purpose: provide cloud persistence and advanced analysis entry points.
+
+Responsibilities:
+
+- Accept synced mobile health records.
+- Store records in DynamoDB.
+- Expose dashboard read APIs.
+- Prepare data for cloud AI reports.
+
+Initial deliverables:
+
+- API route contract.
+- DynamoDB access layer.
+- User-scoped record queries.
+- Basic auth boundary.
+
+### 15. Web Dashboard
+
+Purpose: provide demo and judge-facing visualization.
+
+Responsibilities:
+
+- Show health score.
+- Show trends and summaries.
+- Show check-ins, symptoms, medications, and sync status.
+- Use real backend data once APIs are ready.
+
+Initial deliverables:
+
+- Replace mock data with backend fetch layer.
+- Add loading, empty, and error states.
+- Add dashboard filters.
+- Keep scope focused on visualization.
+
+### 16. Shared Models
+
+Purpose: keep web, backend, and sync data contracts consistent.
+
+Responsibilities:
+
+- Shared health record types.
+- Shared scoring helpers.
+- Shared sync record shape.
+- Shared constants for symptoms, severity, and check-in scales.
+
+Initial deliverables:
+
+- Expand `packages/shared`.
+- Export health entity types.
+- Export scoring utilities.
+- Use shared types in the web app.
+
+## Build Phases
+
+### Phase 1: Foundation and Data Model
+
+Goal: make the product data model solid before adding many screens.
+
+Work:
+
+- Review and complete Room entities for profile, check-ins, symptoms,
+  medications, medication events, emergency contacts, and sync metadata.
+- Add DAO methods for create, update, history, active records, and unsynced
+  records.
+- Expand shared TypeScript models to match the mobile data model.
+- Define canonical sync record fields.
+
+Exit criteria:
+
+- Mobile can save and read core health records locally.
+- Shared models describe the same records used by mobile and web.
+- Unsynced local records can be queried.
+
+### Phase 2: Core Mobile Offline Experience
+
+Goal: make the Android app useful without internet.
+
+Work:
+
+- Build Compose navigation.
+- Build dashboard, check-in, symptoms, medications, timeline, profile, and
+  emergency card screens.
+- Connect screens to Room DB.
+- Add local health score and summary calculations.
+
+Exit criteria:
+
+- User can use the main health tracking flows offline.
+- Dashboard reflects locally saved data.
+- Emergency card is available offline.
+
+### Phase 3: Local Rules and AI Symptom Journal
+
+Goal: add offline intelligence.
+
+Work:
+
+- Expand local rules for repeated symptoms, sleep plus fatigue, medication
+  adherence, and missed check-ins.
+- Add natural-language symptom journal parser.
+- Add review-and-save flow for extracted symptoms.
+- Add tests for rules and parser behavior.
+
+Exit criteria:
+
+- App generates useful local insights without network access.
+- Journal text can create structured symptom records.
+- Rules are covered by focused tests.
+
+### Phase 4: Notifications and Reminders
+
+Goal: make the app proactive.
+
+Work:
+
+- Add notification permission flow.
+- Add medication reminder scheduling.
+- Add daily check-in reminder scheduling.
+- Add missed dose tracking.
+- Add adherence score updates.
+
+Exit criteria:
+
+- Medication and check-in reminders work locally.
+- Medication adherence is calculated from dose events.
+- Missed dose state appears in the dashboard.
+
+### Phase 5: Sync and Cloud Persistence
+
+Goal: sync offline mobile records to cloud.
+
+Work:
+
+- Implement sync queue or pending-sync fields.
+- Implement WorkManager sync behavior.
+- Add backend API contract for upserting records.
+- Map local records to DynamoDB single-table records.
+- Add retry and conflict metadata.
+
+Exit criteria:
+
+- Local records sync when connectivity returns.
+- Sync failures are retried.
+- Dashboard can read synced records from the cloud layer.
+
+### Phase 6: Web Dashboard Integration
+
+Goal: turn the web app from mock dashboard into live demo dashboard.
+
+Work:
+
+- Add backend fetch layer.
+- Replace mock data with real user-scoped data.
+- Add loading, empty, and error states.
+- Visualize check-ins, symptoms, medications, health score, and sync status.
+
+Exit criteria:
+
+- Vercel dashboard displays real synced health data.
+- Dashboard remains focused on visualization and demo evaluation.
+
+### Phase 7: Cloud AI and Weekly Reports
+
+Goal: add advanced cloud intelligence after the offline system is working.
+
+Work:
+
+- Analyze symptom trends.
+- Detect possible health deterioration patterns.
+- Estimate medication effectiveness.
+- Generate weekly health reports.
+- Surface cloud-generated insights in mobile and web.
+
+Exit criteria:
+
+- Cloud insights are stored as health records or report records.
+- Mobile can show synced cloud insights.
+- Web can show weekly report summaries.
+
+### Phase 8: Polish, Testing, and Demo Readiness
+
+Goal: make the hackathon build stable and presentable.
+
+Work:
+
+- Add focused mobile tests for Room, rules, parser, and sync mapping.
+- Add web tests for dashboard data states.
+- Improve empty states and error states.
+- Prepare seed data for demos.
+- Confirm Vercel build and Android run path.
+
+Exit criteria:
+
+- `npm run build:web` passes.
+- Mobile app runs from Android Studio.
+- Demo data clearly shows offline tracking, sync, dashboard visualization, and
+  health insights.
+
+## Suggested Build Order
+
+1. Data model and local persistence.
+2. Core mobile screens.
+3. Local scoring and insights.
+4. Symptom journal parser.
+5. Medication reminders.
+6. Sync engine.
+7. Backend and DynamoDB integration.
+8. Live web dashboard.
+9. Cloud AI reports.
+10. Final testing and demo polish.
+
+## Scope Guardrails
+
+- Do not build the web app as a full replacement for mobile.
+- Do not depend on cloud AI for the core mobile experience.
+- Do not block local data entry on network access.
+- Do not add advanced AI before the data model and sync path are stable.
+- Keep the hackathon demo focused on offline tracking, sync, visualization, and
+  a small number of credible health insights.
