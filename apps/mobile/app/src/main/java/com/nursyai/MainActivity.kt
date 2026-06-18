@@ -5,8 +5,6 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -17,9 +15,10 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -27,6 +26,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.nursyai.backend.AppwriteBackend
 import com.nursyai.navigation.Screen
 import com.nursyai.ui.NursyViewModel
 import com.nursyai.ui.screens.DailyCheckInScreen
@@ -34,16 +34,23 @@ import com.nursyai.ui.screens.DashboardScreen
 import com.nursyai.ui.screens.EmergencyCardScreen
 import com.nursyai.ui.screens.HealthTimelineScreen
 import com.nursyai.ui.screens.MedicationManagementScreen
+import com.nursyai.ui.screens.OfflineAiSettingsScreen
 import com.nursyai.ui.screens.ProfileScreen
 import com.nursyai.ui.screens.SymptomJournalScreen
 import com.nursyai.ui.screens.SymptomTrackingScreen
 import com.nursyai.ui.theme.NursyColors
+import com.nursyai.ui.theme.NursyTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        AppwriteBackend.init(applicationContext)
+        lifecycleScope.launch {
+            runCatching { AppwriteBackend.ping() }
+        }
         setContent {
-            MaterialTheme {
+            NursyTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = NursyColors.background
@@ -133,7 +140,14 @@ fun NursyApp() {
             modifier = Modifier.padding(innerPadding)
         ) {
             composable(Screen.Dashboard.route) {
-                DashboardScreen(viewModel = viewModel)
+                DashboardScreen(
+                    viewModel = viewModel,
+                    onOpenTimeline = { navController.navigate(Screen.HealthTimeline.route) },
+                    onOpenProfile = { navController.navigate(Screen.Profile.route) },
+                    onOpenEmergency = { navController.navigate(Screen.EmergencyCard.route) },
+                    onOpenJournal = { navController.navigate(Screen.SymptomJournal.route) },
+                    onOpenOfflineAi = { navController.navigate(Screen.OfflineAiSettings.route) }
+                )
             }
             composable(Screen.DailyCheckIn.route) {
                 DailyCheckInScreen(viewModel = viewModel)
@@ -155,6 +169,9 @@ fun NursyApp() {
             }
             composable(Screen.SymptomJournal.route) {
                 SymptomJournalScreen(viewModel = viewModel)
+            }
+            composable(Screen.OfflineAiSettings.route) {
+                OfflineAiSettingsScreen(viewModel = viewModel)
             }
         }
     }
