@@ -3,7 +3,15 @@ package com.nursyai.ui
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.nursyai.ai.HealthInsight
 import com.nursyai.ai.LocalRulesEngine
+import com.nursyai.ai.assistant.AiAssistantReview
+import com.nursyai.ai.assistant.AiHealthAssistant
+import com.nursyai.ai.assistant.MedicationDraft
+import com.nursyai.ai.assistant.MedicationScanAssistant
+import com.nursyai.ai.assistant.PremiumAiEntitlements
+import com.nursyai.ai.offline.OfflineAiManager
+import com.nursyai.ai.offline.OfflineAiStatus
 import com.nursyai.data.local.NursyDatabase
 import com.nursyai.data.local.dao.HealthDao
 import com.nursyai.data.local.entity.DailyCheckInEntity
@@ -19,6 +27,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.util.UUID
 
@@ -26,6 +35,10 @@ class NursyViewModel(application: Application) : AndroidViewModel(application) {
 
     private val dao: HealthDao
     private val rulesEngine = LocalRulesEngine()
+    private val offlineAiManager = OfflineAiManager(application)
+    private val premiumAiEntitlements = PremiumAiEntitlements(application)
+    private val medicationScanAssistant = MedicationScanAssistant()
+    private val aiHealthAssistant = AiHealthAssistant()
 
     private val demoUserId = "demo-user"
 
@@ -65,12 +78,137 @@ class NursyViewModel(application: Application) : AndroidViewModel(application) {
 
     // ─── Insights ──────────────────────────────────────────────
 
-    val insights: StateFlow<List<String>> = combine(
+    val insights: StateFlow<List<HealthInsight>> = combine(
         latestCheckIn,
         activeSymptoms
     ) { checkIn, symptoms ->
         rulesEngine.insights(checkIn, symptoms)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val offlineAiStatus: StateFlow<OfflineAiStatus> = offlineAiManager.status
+    val isPremiumAiEnabled: StateFlow<Boolean> = premiumAiEntitlements.isPremium
+
+    private val _medicationDraft = MutableStateFlow<MedicationDraft?>(null)
+    val medicationDraft: StateFlow<MedicationDraft?> = _medicationDraft.asStateFlow()
+
+    private val _aiAssistantReview = MutableStateFlow<AiAssistantReview?>(null)
+    val aiAssistantReview: StateFlow<AiAssistantReview?> = _aiAssistantReview.asStateFlow()
+
+    private val _aiAssistantMessage = MutableStateFlow<String?>(null)
+    val aiAssistantMessage: StateFlow<String?> = _aiAssistantMessage.asStateFlow()
+
+    private fun canUsePremiumOfflineAi(): Boolean {
+        return premiumAiEntitlements.isPremium.value && offlineAiManager.status.value.isDownloaded
+    }
+
+    fun setPremiumAiForTesting(enabled: Boolean) {
+        premiumAiEntitlements.setPremium(enabled)
+        _aiAssistantMessage.value = if (enabled) {
+            "Premium AI enabled for testing."
+        } else {
+            "Premium AI disabled."
+        }
+    }
+
+    fun downloadOfflineAiModel() {
+        viewModelScope.launch {
+            offlineAiManager.downloadModel()
+        }
+    }
+
+    fun deleteOfflineAiModel() {
+        offlineAiManager.deleteModel()
+    }
+
+    fun resetOfflineAiSetupState() {
+        offlineAiManager.resetSetupState()
+    }
+
+    fun simulateOfflineAiNoModel() {
+        offlineAiManager.simulateNoModel()
+    }
+
+    fun simulateOfflineAiLowRam() {
+        offlineAiManager.simulateLowRam()
+    }
+
+    fun simulateOfflineAiDownloadFailed() {
+        offlineAiManager.simulateDownloadFailed()
+    }
+
+    fun runOfflineAiTestSummary() {
+        offlineAiManager.runTestSummary()
+    }
+
+    fun parseMedicationScanText(rawText: String) {
+        if (!canUsePremiumOfflineAi()) {
+            _aiAssistantMessage.value = "Premium Offline AI must be enabled and downloaded before scanning medication text."
+            return
+        }
+        _medicationDraft.value = medicationScanAssistant.parseOcrText(rawText)
+        _aiAssistantMessage.value = "Medication draft created. Review every field before saving."
+    }
+
+    fun clearMedicationDraft() {
+        _medicationDraft.value = null
+    }
+
+    fun generateAiDailyReview() {
+        if (!canUsePremiumOfflineAi()) {
+            _aiAssistantMessage.value = "Premium Offline AI must be enabled and downloaded before generating a daily review."
+            return
+        }
+        viewModelScope.launch {
+            val review = aiHealthAssistant.dailyReview(
+                latestCheckIn = latestCheckIn.value,
+                symptoms = activeSymptoms.value,
+                medications = activeMedications.value,
+                insights = insights.value
+            )
+            _aiAssistantReview.value = review
+            _aiAssistantMessage.value = "AI daily review generated from records saved on this device."
+        }
+    }
+
+    fun generateAiWeeklyReview() {
+        if (!canUsePremiumOfflineAi()) {
+            _aiAssistantMessage.value = "Premium Offline AI must be enabled and downloaded before generating a weekly review."
+            return
+        }
+        viewModelScope.launch {
+            val sevenDaysAgo = System.currentTimeMillis() - 7L * 24L * 60L * 60L * 1000L
+            val review = aiHealthAssistant.weeklyReview(
+                checkIns = dao.getAllCheckIns(demoUserId).take(7),
+                symptoms = dao.getAllSymptoms(demoUserId).filter { it.startedAt >= sevenDaysAgo },
+                medications = dao.getAllMedications(demoUserId),
+                insights = insights.value
+            )
+            _aiAssistantReview.value = review
+            _aiAssistantMessage.value = "AI weekly review generated from records saved on this device."
+        }
+    }
+
+    fun generateCustomAiInsight(prompt: String) {
+        if (!canUsePremiumOfflineAi()) {
+            _aiAssistantMessage.value = "Premium Offline AI must be enabled and downloaded before generating custom insights."
+            return
+        }
+        viewModelScope.launch {
+            val review = aiHealthAssistant.customInsight(
+                prompt = prompt,
+                latestCheckIn = latestCheckIn.value,
+                symptoms = activeSymptoms.value,
+                medications = activeMedications.value,
+                insights = insights.value
+            )
+            _aiAssistantReview.value = review
+            _aiAssistantMessage.value = "Custom AI insight generated from records saved on this device."
+        }
+    }
+
+    fun clearAiAssistantMessage() {
+        _aiAssistantMessage.value = null
+    }
 
     // ─── Pending sync counts ───────────────────────────────────
 

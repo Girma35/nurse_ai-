@@ -9,6 +9,7 @@ sealed class Screen(val route: String, val label: String) {
     data object Profile : Screen("profile", "Profile")
     data object EmergencyCard : Screen("emergency", "Emergency")
     data object SymptomJournal : Screen("symptom_journal", "Journal")
+    data object OfflineAiSettings : Screen("offline_ai_settings", "Offline AI")
 
     companion object {
         val bottomNavItems = listOf(
@@ -22,7 +23,8 @@ sealed class Screen(val route: String, val label: String) {
             HealthTimeline,
             Profile,
             EmergencyCard,
-            SymptomJournal
+            SymptomJournal,
+            OfflineAiSettings
         )
     }
 }
