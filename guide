@@ -1,135 +1,83 @@
-📱🌐 Nursy AI — Product & Build Guide (Hackathon Version)
-🧠 Product Vision
+# Nursy AI Product & Build Guide
 
-Nursy AI is a mobile-first, offline-capable AI health companion that helps users:
+## Product Vision
 
-Track daily health status
-Log symptoms and medications
-Detect health trends over time
-Generate health insights and reports
-Work offline and sync when internet is available
+Nursy AI is a mobile-first, offline-capable AI health companion that helps users track daily health status, symptoms, medications, emergency health details, and health trends.
 
-It is designed for real-world usability, especially in low-connectivity environments.
+The product is designed for real-world low-connectivity use.
 
-🧭 System Strategy (VERY IMPORTANT)
-🥇 1. Mobile App (PRIMARY PRODUCT)
+```text
+Mobile-first, offline-first, cloud-enhanced.
+```
 
-📱 Kotlin + Jetpack Compose app is the main user-facing product
+## System Strategy
 
-This is what users actually use daily.
+### 1. Android App Is The Product
 
-Core idea:
+The Kotlin + Jetpack Compose Android app is the daily user experience. It must work without internet.
 
-“Everything works offline first, then syncs to cloud intelligence.”
+Core local capabilities:
 
-🥈 2. Web App (SECONDARY — REQUIRED FOR VERCEL)
+- profile and emergency health card
+- daily health check-ins
+- symptom tracking
+- medication management
+- local dashboard and timeline
+- reminders and notifications
+- local rules and symptom parser
 
-🌐 Next.js app deployed on Vercel is ONLY for:
+### 2. AWS Is The Support Layer
 
-demo access
-judge evaluation
-data visualization
-It is NOT a full product.
+AWS should only provide:
 
-It is:
+- authentication
+- backup
+- sync
+- recovery on a new device
+- optional report generation
 
-“A live dashboard connected to the same backend.”
+The recommended backend is Cognito, API Gateway HTTP API, Lambda, and DynamoDB. Keep it serverless and low-cost.
 
-📱 MOBILE APP (MAIN PRODUCT)
-🔧 Tech Stack
-Kotlin (Android)
-Jetpack Compose (UI)
-Room DB (offline storage)
-WorkManager (background sync)
-Retrofit (API calls)
-Local rules engine (light AI logic)
-🧠 Features (FULL MOBILE SYSTEM)
-1. Authentication & Profile
-Email login / signup
-User profile
-Health profile:
-age
-gender
-weight
-height
-blood type
-allergies
-chronic conditions
-2. Daily Health Check-in
-Mood tracking (5 levels)
-Energy level (1–10)
-Sleep hours + quality
-Stress level
-Water intake
-Notes (free text)
-3. Symptom Tracking
-Add symptoms (headache, fever, fatigue, etc.)
-Severity (1–5)
-Duration tracking
-Notes per symptom
-Date-based history
-4. Medication Management
-Add medication
-Dose + frequency
-Schedule reminders
-Missed dose tracking
-Adherence score (%)
-5. Health Dashboard
-Health score (0–100)
-Today’s summary
-Active symptoms
-Medication status
-Quick insights
-6. Health Timeline
-Chronological health history
-Symptom + medication events
-Daily logs visualization
-7. AI Symptom Journal (Local AI)
+### 3. Cloud AI Is Optional Premium Intelligence
 
-Natural language input:
+Cloud AI should not run for every journal note or screen load. It should generate occasional reports from compact structured data:
 
-“I feel tired and have headache for 3 days”
+- weekly health summary
+- monthly trend report
+- medication adherence explanation
+- symptom trend explanation
 
-Extracts structured data:
-fatigue
-headache
-Auto-logs into system
-8. AI Health Insights (Cloud + Local)
-Local AI (on-device)
-Basic rules:
-symptom repetition detection
-sleep vs fatigue warnings
-medication reminders
-Cloud AI (advanced)
-Trend analysis:
-symptom patterns
-health deterioration detection
-medication effectiveness
-Weekly health report generation
-9. Emergency Health Card (Offline)
-Name
-Blood type
-Allergies
-Emergency contacts
-Conditions
-One-tap access
-10. Notifications System
-Medication reminders
-Check-in reminders
-Appointment alerts
-Hydration reminders
-11. Offline Mode (VERY IMPORTANT FEATURE)
-Fully functional without internet
-All data stored in Room DB
-Syncs automatically when online
-12. Sync Engine
-Local Room DB → Cloud DynamoDB
-Background sync using WorkManager
-Conflict-safe updates
-🌐 WEB APP (SECONDARY — VERCEL)
-🔧 Tech Stack
-Next.js
-React
-TailwindCSS
-Vercel Hosting
-AWS SDK (DynamoDB connection)
+Local AI handles daily value. Cloud AI improves reports when credits or a paid plan allow it.
+
+## Mobile Feature Scope
+
+1. Authentication and profile
+2. Daily health check-in
+3. Symptom tracking
+4. Medication management
+5. Health dashboard
+6. Health timeline
+7. AI symptom journal
+8. Local health insights
+9. Emergency health card
+10. Notifications and reminders
+11. Offline Room storage
+12. Sync engine
+13. Optional cloud reports
+
+## Health Safety Boundary
+
+Nursy AI must stay in the health companion category. It tracks, summarizes, and highlights patterns; it does not diagnose, predict disease, prescribe treatment, or replace doctor advice.
+
+Safe wording examples:
+
+- "This is a pattern worth reviewing with a doctor."
+- "You might want to mention this at your next appointment."
+- "Here is a summary of your symptoms."
+- "No diagnosis is provided, only tracking insights."
+
+Avoid wording such as "you may have disease X", "this is likely diabetes/depression/infection", treatment instructions, or emergency diagnosis claims.
+
+## Cost Rule
+
+With USD $100 AWS credits for 6 months, target $0-$5/month during development. Do not self-host LLMs on AWS. Use cloud AI only for explicit report generation and cache results.

@@ -1,216 +1,157 @@
 # Nursy AI
 
-Nursy AI is a mobile-first, offline-capable AI health companion designed to help users track daily health status, log symptoms and medications, detect health trends, and generate useful health insights and reports.
+Nursy AI is a mobile-first, offline-first Android health companion.
 
-The product is built around real-world use in low-connectivity environments:
+```text
+Mobile-first, offline-first, cloud-enhanced.
+```
 
-> Everything works offline first, then syncs to cloud intelligence.
+The phone is the primary system. The app must keep working without internet. AWS is used only for authentication, backup, sync, and recovery. Cloud AI is an optional premium enhancement for deeper weekly or monthly summaries, not a dependency for daily use.
 
-## Product Strategy
+## Product Principle
 
-### Primary Product: Mobile App
+Nursy AI keeps the user's health companion usable without internet.
 
-The main user-facing product is a Kotlin Android app built with Jetpack Compose. Users should be able to use the core experience every day, even without an internet connection.
+- Core app: works fully offline on the phone.
+- AWS: handles auth, backup, sync, and recovery.
+- Cloud AI: generates occasional premium reports from synced summaries.
 
-### Secondary Product: Web App
+This protects the product from high AWS bills, weak connectivity, slow AI responses, privacy risk, and cloud outages.
 
-The web app is a Next.js dashboard deployed on Vercel. It exists for demo access, judge evaluation, and data visualization. It is not intended to be the full product experience.
-
-## Repository Layout
+## Project Structure
 
 ```text
 apps/
-  mobile/        Android app skeleton for the offline-first mobile product
-  web/           Next.js dashboard for Vercel demos and visualization
-packages/
-  shared/        Shared TypeScript health models and scoring helpers
+  mobile/        Android app in Kotlin, Jetpack Compose, Room, WorkManager
 infra/
-  dynamodb/      DynamoDB table definition for sync records
+  dynamodb/      DynamoDB table definition for mobile sync records
+skills/          Repo-local implementation guidance for mobile features
+guide            Product and architecture guide
+component        Mobile component and phase plan
+manual.md        Build and verification checklist
 ```
 
-## Getting Started
-
-### Prerequisites
-
-- Node.js 22 or newer
-- npm 10 or newer
-- Android Studio for the mobile app
-- Android SDK 35 for the current Android scaffold
-
-### Install Dependencies
-
-```bash
-npm install
-```
-
-### Run the Web Dashboard
-
-```bash
-npm run dev:web
-```
-
-The dashboard runs from `apps/web` and uses mock health data until the backend API is connected.
-
-### Build the Web Dashboard
-
-```bash
-npm run build:web
-```
-
-### Run the Android App
-
-1. Open `apps/mobile` in Android Studio.
-2. Let Android Studio sync the Gradle project.
-3. Confirm the Android SDK path in `local.properties`.
-4. Run the `app` configuration on an emulator or device.
-
-The mobile scaffold includes Compose screens, Room entities, a DAO, a local rules engine starter, and a WorkManager sync worker placeholder.
-
-## Deployment
-
-The repository includes `vercel.json` at the root. Vercel should install dependencies with `npm install` and build the dashboard with:
-
-```bash
-npm run build:web
-```
-
-## Mobile App
-
-### Tech Stack
+## Android Stack
 
 - Kotlin
 - Jetpack Compose
 - Room DB for offline storage
 - WorkManager for background sync
-- Retrofit for API calls
-- Local rules engine for lightweight on-device health logic
+- OkHttp / Retrofit for backend calls
+- Local rules engine for deterministic on-device health insights
 
-### Core Features
+## AWS Stack
 
-#### Authentication and Profile
+Keep AWS small and serverless:
 
-- Email login and signup
-- User profile
-- Health profile including age, gender, weight, height, blood type, allergies, and chronic conditions
+- Amazon Cognito for auth
+- API Gateway HTTP API for mobile endpoints
+- Lambda for sync and report jobs
+- DynamoDB for synced health records
+- Optional Bedrock for weekly/monthly report generation
 
-#### Daily Health Check-In
+Avoid always-on servers, EC2 GPU instances, Aurora/RDS, OpenSearch, NAT Gateway, and self-hosted LLMs on AWS.
 
-- Mood tracking with five levels
-- Energy level from 1 to 10
-- Sleep hours and sleep quality
-- Stress level
-- Water intake
-- Free-text notes
+## Build Commands
 
-#### Symptom Tracking
+From the mobile workspace:
 
-- Add symptoms such as headache, fever, or fatigue
-- Track severity from 1 to 5
-- Track symptom duration
-- Add symptom notes
-- View date-based symptom history
-
-#### Medication Management
-
-- Add medications
-- Track dose and frequency
-- Schedule reminders
-- Track missed doses
-- Calculate adherence score
-
-#### Health Dashboard
-
-- Health score from 0 to 100
-- Today's summary
-- Active symptoms
-- Medication status
-- Quick health insights
-
-#### Health Timeline
-
-- Chronological health history
-- Symptom events
-- Medication events
-- Daily log visualization
-
-#### AI Symptom Journal
-
-Users can enter natural language health notes, such as:
-
-```text
-I feel tired and have headache for 3 days
+```bash
+cd apps/mobile
+./gradlew build
+./gradlew test
+./gradlew assembleDebug
 ```
 
-The app extracts structured health data, such as fatigue and headache, and logs it into the system.
+Build the debug APK:
 
-#### AI Health Insights
+```bash
+cd apps/mobile
+./gradlew assembleDebug
+```
 
-Local on-device logic handles basic insights:
+The APK is written to:
 
-- Repeated symptom detection
-- Sleep versus fatigue warnings
-- Medication reminders
+```text
+apps/mobile/app/build/outputs/apk/debug/app-debug.apk
+```
 
-Cloud AI handles advanced analysis:
+## Mobile Features
 
-- Symptom trend analysis
-- Health deterioration detection
-- Medication effectiveness analysis
-- Weekly health report generation
+- Authentication and profile
+- Daily health check-ins
+- Symptom tracking
+- Medication management
+- Health dashboard
+- Health timeline
+- AI symptom journal
+- Local health insights
+- Emergency health card
+- Notifications and reminders
+- Offline Room storage
+- WorkManager sync to AWS
 
-#### Emergency Health Card
+## AI Strategy
 
-The emergency health card is available offline and includes:
+Local AI handles everyday value:
 
-- Name
-- Blood type
-- Allergies
-- Emergency contacts
-- Chronic conditions
-- One-tap access
+- symptom parsing
+- repeated symptom detection
+- sleep and fatigue warnings
+- hydration and stress insights
+- medication adherence patterns
+- offline dashboard insights
 
-#### Notifications
+Cloud AI is reserved for occasional premium work:
 
-- Medication reminders
-- Check-in reminders
-- Appointment alerts
-- Hydration reminders
+- weekly health summaries
+- monthly trend reports
+- polished explanations from structured synced data
 
-#### Offline Mode
+Do not send every journal note to cloud AI. Prefer sending compact structured summaries after local processing.
 
-The mobile app is fully functional without internet access. User data is stored locally in Room DB and synced automatically when connectivity is available.
+## Health Safety Wording
 
-#### Sync Engine
+Nursy AI provides tracking insights, summaries, and patterns. It must not diagnose conditions, predict diseases, prescribe treatment, or replace clinician advice.
 
-- Syncs local Room DB data to cloud DynamoDB
-- Runs background sync with WorkManager
-- Supports conflict-safe updates
+Safe product language:
 
-## Web App
+- "This is a pattern worth reviewing with a doctor."
+- "You might want to mention this at your next appointment."
+- "Here is a summary of your symptoms."
+- "No diagnosis is provided, only tracking insights."
 
-### Tech Stack
+Avoid wording such as "you may have disease X", "this is likely diabetes/depression/infection", treatment instructions, or emergency diagnosis claims.
 
-- Next.js
-- React
-- TailwindCSS
-- Vercel Hosting
-- AWS SDK for DynamoDB access
-
-### Purpose
-
-The web app provides a live dashboard connected to the same backend as the mobile app. It is used for demo access, judge evaluation, and health data visualization.
-
-## Architecture Summary
+## Architecture
 
 ```text
 Android App
   -> Room DB
+  -> LocalRulesEngine
   -> WorkManager Sync
-  -> Cloud Backend
+  -> API Gateway + Lambda
   -> DynamoDB
-  -> Next.js Dashboard on Vercel
+  -> Optional Cloud AI Reports
+  -> Synced report records back to mobile
 ```
 
-## Guiding Principle
+Room remains the offline source of truth. DynamoDB is a cloud backup and recovery layer, not a replacement for local data.
 
-Nursy AI should remain useful without connectivity, then become more intelligent when cloud services are available.
+## Cost Guardrails
+
+With USD $100 in AWS credits for 6 months, target a mobile-only burn rate of $0-$5/month for early development.
+
+Use budget alerts at:
+
+- $5
+- $15
+- $30
+- $60
+- $90
+
+Keep CloudWatch log retention short, cache generated reports, and only call cloud AI for explicit report generation.
+
+## Security
+
+Do not commit `.env`, Android `local.properties`, AWS credentials, signing keys, or generated build output. Treat health data as sensitive. Keep user-scoped keys and auth checks in every sync endpoint.

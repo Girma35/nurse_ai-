@@ -1,6 +1,12 @@
 # Nursy AI Android App
 
-This is the mobile-first product surface for Nursy AI.
+This is the primary product surface for Nursy AI.
+
+```text
+Mobile-first, offline-first, cloud-enhanced.
+```
+
+The app should remain useful without internet. AWS sync and cloud AI are enhancements, not requirements for the daily experience.
 
 ## Stack
 
@@ -8,7 +14,7 @@ This is the mobile-first product surface for Nursy AI.
 - Jetpack Compose
 - Room DB
 - WorkManager
-- Retrofit
+- OkHttp / Retrofit
 - Local rules engine
 
 ## Local Setup
@@ -18,15 +24,29 @@ This is the mobile-first product surface for Nursy AI.
 3. Set the Android SDK path in `local.properties` if Android Studio does not create it automatically.
 4. Run the `app` configuration on an emulator or Android device.
 
-This workspace does not include a Gradle wrapper yet. After Android Studio syncs successfully, generate one from the Android Studio Gradle tools or run `gradle wrapper` if Gradle is installed locally.
+## Commands
+
+```bash
+./gradlew build
+./gradlew test
+./gradlew assembleDebug
+./gradlew compileDebugKotlin
+```
+
+Build output:
+
+```text
+app/build/outputs/apk/debug/app-debug.apk
+```
 
 ## Current Scope
 
-The current mobile scaffold includes:
+- Compose app shell and screens
+- Room entities and DAO for health data
+- Local rules engine for offline insights
+- AI symptom journal parser
+- Notification/reminder helpers
+- WorkManager sync worker
+- DynamoDB-compatible sync mapper
 
-- Compose dashboard starter
-- Room entities and DAO for check-ins, symptoms, and medications
-- Local rules engine starter
-- WorkManager sync worker placeholder
-
-Room remains the local source of truth. Sync should upload queued records to the cloud backend when the device is online.
+Room remains the local source of truth. Sync uploads queued records to the AWS backend when the device is online.
