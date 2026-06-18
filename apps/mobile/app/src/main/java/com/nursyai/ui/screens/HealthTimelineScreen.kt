@@ -1,19 +1,15 @@
 package com.nursyai.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -24,8 +20,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.nursyai.data.local.entity.DailyCheckInEntity
+import com.nursyai.data.local.entity.MedicationDoseEventEntity
+import com.nursyai.data.local.entity.MedicationEntity
+import com.nursyai.data.local.entity.SymptomEntity
 import com.nursyai.ui.NursyViewModel
+import com.nursyai.ui.components.EmptyStateCard
+import com.nursyai.ui.components.MetricTile
+import com.nursyai.ui.components.NursyCard
+import com.nursyai.ui.components.NursyScreen
+import com.nursyai.ui.components.SectionTitle
+import com.nursyai.ui.components.StatusPill
 import com.nursyai.ui.theme.NursyColors
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -50,77 +55,50 @@ fun HealthTimelineScreen(viewModel: NursyViewModel) {
     val events = remember(checkIns, symptoms, medications, doseEvents) {
         buildTimelineEvents(checkIns, symptoms, medications, doseEvents)
     }
+    val groupedEvents = remember(events) { events.groupBy { it.date } }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NursyColors.background)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    NursyScreen(
+        eyebrow = "Local history",
+        title = "Timeline",
+        subtitle = "A chronological record of check-ins, symptoms, and medication activity."
     ) {
         item {
-            Text(
-                text = "Timeline",
-                color = NursyColors.ink,
-                fontSize = 28.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Text(
-                text = "Your health history",
-                color = NursyColors.inkMuted,
-                fontSize = 14.sp
-            )
-            Spacer(modifier = Modifier.height(8.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricTile(
+                    label = "Check-ins",
+                    value = checkIns.size.toString(),
+                    detail = "Daily baselines",
+                    modifier = Modifier.weight(1f),
+                    accent = NursyColors.mint
+                )
+                MetricTile(
+                    label = "Events",
+                    value = events.size.toString(),
+                    detail = "Local records",
+                    modifier = Modifier.weight(1f),
+                    accent = NursyColors.moss
+                )
+            }
         }
 
         if (events.isEmpty()) {
             item {
-                Surface(
-                    modifier = Modifier.fillMaxWidth(),
-                    color = NursyColors.cloud,
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Column(
-                        modifier = Modifier.padding(24.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Text(
-                            text = "No events yet",
-                            color = NursyColors.ink,
-                            fontWeight = FontWeight.SemiBold
-                        )
-                        Text(
-                            text = "Your check-ins, symptoms, and medication events will appear here.",
-                            color = NursyColors.inkMuted,
-                            fontSize = 14.sp
-                        )
-                    }
-                }
-            }
-        }
-
-        // Group events by date
-        val groupedEvents = events.groupBy { it.date }
-        val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
-        val displayFormat = SimpleDateFormat("MMM dd, yyyy", Locale.US)
-
-        for ((date, dateEvents) in groupedEvents) {
-            item {
-                val displayDate = try {
-                    displayFormat.format(dateFormat.parse(date) ?: Date())
-                } catch (e: Exception) { date }
-
-                Text(
-                    text = displayDate,
-                    color = NursyColors.moss,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    modifier = Modifier.padding(top = 8.dp, bottom = 4.dp)
+                EmptyStateCard(
+                    title = "No timeline events yet",
+                    message = "Your check-ins, symptom logs, and medication dose events will appear here."
                 )
             }
-
-            items(dateEvents) { event ->
-                TimelineEventCard(event)
+        } else {
+            groupedEvents.forEach { (date, dateEvents) ->
+                item(key = "date-$date") {
+                    SectionTitle(
+                        title = date.asDisplayDate(),
+                        action = "${dateEvents.size} events"
+                    )
+                }
+                items(dateEvents, key = { it.id }) { event ->
+                    TimelineEventCard(event)
+                }
             }
         }
     }
@@ -128,49 +106,51 @@ fun HealthTimelineScreen(viewModel: NursyViewModel) {
 
 @Composable
 private fun TimelineEventCard(event: TimelineEvent) {
-    Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = NursyColors.surface,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 1.dp
-    ) {
-        Row(modifier = Modifier.padding(14.dp)) {
-            // Time column
-            Text(
-                text = event.time,
-                color = NursyColors.inkMuted,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Medium,
-                modifier = Modifier.width(44.dp)
-            )
-
-            // Dot indicator
-            val dotColor = when (event.type) {
-                "checkin" -> NursyColors.mint
-                "symptom" -> NursyColors.amber
-                "medication", "dose" -> NursyColors.moss
-                "insight" -> NursyColors.coral
-                else -> NursyColors.inkMuted
-            }
-            Surface(
-                modifier = Modifier.padding(top = 6.dp).size(8.dp),
-                color = dotColor,
-                shape = RoundedCornerShape(50)
-            ) {}
-
-            Spacer(modifier = Modifier.width(10.dp))
-
-            Column {
+    NursyCard {
+        Row(
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 Text(
-                    text = event.label,
-                    color = NursyColors.ink,
-                    fontWeight = FontWeight.SemiBold,
-                    fontSize = 14.sp
+                    text = event.time,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.labelMedium,
+                    fontWeight = FontWeight.SemiBold
                 )
+                Surface(
+                    modifier = Modifier.size(12.dp),
+                    color = event.type.eventColor(),
+                    shape = CircleShape
+                ) {}
+            }
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text(
+                        text = event.label,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        style = MaterialTheme.typography.titleMedium
+                    )
+                    StatusPill(
+                        text = event.type.eventLabel(),
+                        containerColor = event.type.eventSoftColor(),
+                        contentColor = event.type.eventColor()
+                    )
+                }
                 Text(
                     text = event.detail,
-                    color = NursyColors.inkMuted,
-                    fontSize = 13.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -178,17 +158,16 @@ private fun TimelineEventCard(event: TimelineEvent) {
 }
 
 private fun buildTimelineEvents(
-    checkIns: List<com.nursyai.data.local.entity.DailyCheckInEntity>,
-    symptoms: List<com.nursyai.data.local.entity.SymptomEntity>,
-    medications: List<com.nursyai.data.local.entity.MedicationEntity>,
-    doseEvents: List<com.nursyai.data.local.entity.MedicationDoseEventEntity>
+    checkIns: List<DailyCheckInEntity>,
+    symptoms: List<SymptomEntity>,
+    medications: List<MedicationEntity>,
+    doseEvents: List<MedicationDoseEventEntity>
 ): List<TimelineEvent> {
     val events = mutableListOf<TimelineEvent>()
-
     val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.US)
     val timeFormat = SimpleDateFormat("HH:mm", Locale.US)
 
-    for (checkIn in checkIns) {
+    checkIns.forEach { checkIn ->
         events.add(
             TimelineEvent(
                 id = "ci-${checkIn.id}",
@@ -196,37 +175,29 @@ private fun buildTimelineEvents(
                 time = "12:00",
                 type = "checkin",
                 label = "Check-in recorded",
-                detail = "Mood: ${checkIn.mood}, Energy: ${checkIn.energyLevel}/10, Sleep: ${checkIn.sleepHours}h"
+                detail = "Mood ${checkIn.mood}, energy ${checkIn.energyLevel}/10, sleep ${checkIn.sleepHours.toString().removeSuffix(".0")}h"
             )
         )
     }
 
-    for (symptom in symptoms) {
-        val date = try {
-            dateFormat.format(Date(symptom.startedAt))
-        } catch (e: Exception) { dateFormat.format(Date()) }
-        val time = try {
-            timeFormat.format(Date(symptom.startedAt))
-        } catch (e: Exception) { "12:00" }
+    symptoms.forEach { symptom ->
+        val date = dateFormat.format(Date(symptom.startedAt))
+        val time = timeFormat.format(Date(symptom.startedAt))
         events.add(
             TimelineEvent(
                 id = "sym-${symptom.id}",
                 date = date,
                 time = time,
                 type = "symptom",
-                label = "Symptom: ${symptom.name}",
-                detail = "Severity: ${symptom.severity}/5${symptom.durationHours?.let { ", ${it}h" } ?: ""}"
+                label = symptom.name,
+                detail = "Severity ${symptom.severity}/5${symptom.durationHours?.let { ", ${it}h duration" } ?: ""}"
             )
         )
     }
 
-    for (dose in doseEvents) {
-        val date = try {
-            dateFormat.format(Date(dose.scheduledTime))
-        } catch (e: Exception) { dateFormat.format(Date()) }
-        val time = try {
-            timeFormat.format(Date(dose.scheduledTime))
-        } catch (e: Exception) { "12:00" }
+    doseEvents.forEach { dose ->
+        val date = dateFormat.format(Date(dose.scheduledTime))
+        val time = timeFormat.format(Date(dose.scheduledTime))
         val medName = medications.find { it.id == dose.medicationId }?.name ?: "Medication"
         events.add(
             TimelineEvent(
@@ -234,12 +205,42 @@ private fun buildTimelineEvents(
                 date = date,
                 time = time,
                 type = "dose",
-                label = "Dose: ${dose.status.replaceFirstChar { it.uppercase() }}",
-                detail = "${medName} — ${dose.status}"
+                label = medName,
+                detail = "Dose marked ${dose.status}"
             )
         )
     }
 
-    events.sortWith(compareByDescending<TimelineEvent> { it.date }.thenByDescending { it.time })
-    return events
+    return events.sortedWith(
+        compareByDescending<TimelineEvent> { it.date }.thenByDescending { it.time }
+    )
+}
+
+@Composable
+private fun String.eventColor() = when (this) {
+    "checkin" -> NursyColors.moss
+    "symptom" -> NursyColors.amber
+    "dose" -> NursyColors.mint
+    else -> MaterialTheme.colorScheme.onSurfaceVariant
+}
+
+@Composable
+private fun String.eventSoftColor() = when (this) {
+    "checkin" -> NursyColors.mintSoft
+    "symptom" -> NursyColors.amberSoft
+    "dose" -> NursyColors.mintSoft
+    else -> MaterialTheme.colorScheme.surfaceVariant
+}
+
+private fun String.eventLabel() = when (this) {
+    "checkin" -> "Check-In"
+    "symptom" -> "Symptom"
+    "dose" -> "Dose"
+    else -> "Event"
+}
+
+private fun String.asDisplayDate(): String {
+    val input = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+    val output = SimpleDateFormat("MMM d, yyyy", Locale.US)
+    return runCatching { output.format(input.parse(this) ?: Date()) }.getOrDefault(this)
 }

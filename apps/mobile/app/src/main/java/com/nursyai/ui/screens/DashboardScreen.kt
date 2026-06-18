@@ -1,135 +1,172 @@
 package com.nursyai.ui.screens
 
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.nursyai.ai.HealthInsight
+import com.nursyai.ai.InsightSeverity
+import com.nursyai.data.local.entity.DailyCheckInEntity
+import com.nursyai.data.local.entity.MedicationEntity
+import com.nursyai.data.local.entity.SymptomEntity
 import com.nursyai.ui.NursyViewModel
+import com.nursyai.ui.components.EmptyStateCard
+import com.nursyai.ui.components.MetricTile
+import com.nursyai.ui.components.NursyCard
+import com.nursyai.ui.components.NursyScreen
+import com.nursyai.ui.components.PrimaryActionButton
+import com.nursyai.ui.components.SecondaryActionButton
+import com.nursyai.ui.components.SectionTitle
+import com.nursyai.ui.components.StatusPill
 import com.nursyai.ui.theme.NursyColors
 
 @Composable
-fun DashboardScreen(viewModel: NursyViewModel) {
+fun DashboardScreen(
+    viewModel: NursyViewModel,
+    onOpenTimeline: () -> Unit = {},
+    onOpenProfile: () -> Unit = {},
+    onOpenEmergency: () -> Unit = {},
+    onOpenJournal: () -> Unit = {},
+    onOpenOfflineAi: () -> Unit = {}
+) {
     val checkIn by viewModel.latestCheckIn.collectAsState()
     val symptoms by viewModel.activeSymptoms.collectAsState()
     val medications by viewModel.activeMedications.collectAsState()
     val insights by viewModel.insights.collectAsState()
+    val pendingSync by viewModel.pendingSyncCounts.collectAsState()
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NursyColors.background)
-            .padding(20.dp),
-        verticalArrangement = Arrangement.spacedBy(16.dp)
+    LaunchedEffect(Unit) {
+        viewModel.refreshPendingSyncCounts()
+    }
+
+    NursyScreen(
+        eyebrow = "Offline companion",
+        title = "Today",
+        subtitle = "Your local health summary stays available without internet."
     ) {
         item {
-            Text(
-                text = "Nursy AI",
-                color = NursyColors.moss,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Text(
-                text = "Today",
-                color = NursyColors.ink,
-                fontSize = 34.sp,
-                fontWeight = FontWeight.Bold
-            )
+            HealthScoreCard(checkIn = checkIn, symptoms = symptoms)
         }
 
-        // Health Score Card
         item {
-            HealthScoreCard(
-                checkIn = checkIn,
-                symptoms = symptoms,
-                medications = medications
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricTile(
+                    label = "Sleep",
+                    value = "${checkIn?.sleepHours ?: 0.0} h",
+                    detail = checkIn?.sleepQuality?.replaceFirstChar { it.uppercase() } ?: "No check-in",
+                    modifier = Modifier.weight(1f),
+                    accent = NursyColors.mint
+                )
+                MetricTile(
+                    label = "Water",
+                    value = "${checkIn?.waterIntakeMl ?: 0} ml",
+                    detail = "Goal 2000 ml",
+                    modifier = Modifier.weight(1f),
+                    accent = NursyColors.moss
+                )
+            }
         }
 
-        // Quick Metrics
         item {
-            QuickMetricRow(
-                sleepHours = checkIn?.sleepHours ?: 0.0,
-                waterIntake = checkIn?.waterIntakeMl ?: 0
-            )
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MetricTile(
+                    label = "Energy",
+                    value = "${checkIn?.energyLevel ?: 0}/10",
+                    detail = checkIn?.mood?.replaceFirstChar { it.uppercase() } ?: "No mood yet",
+                    modifier = Modifier.weight(1f),
+                    accent = NursyColors.amber
+                )
+                MetricTile(
+                    label = "Sync",
+                    value = pendingSync.total.toString(),
+                    detail = if (pendingSync.total == 0) "All local" else "Queued records",
+                    modifier = Modifier.weight(1f),
+                    accent = if (pendingSync.total == 0) NursyColors.mint else NursyColors.amber
+                )
+            }
         }
 
-        // Insights
+        item {
+            NursyCard {
+                SectionTitle(title = "Quick actions")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SecondaryActionButton(
+                        text = "Journal",
+                        onClick = onOpenJournal,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SecondaryActionButton(
+                        text = "Timeline",
+                        onClick = onOpenTimeline,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SecondaryActionButton(
+                        text = "Offline AI",
+                        onClick = onOpenOfflineAi,
+                        modifier = Modifier.weight(1f)
+                    )
+                    SecondaryActionButton(
+                        text = "Profile",
+                        onClick = onOpenProfile,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+
         if (insights.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Insights",
-                    color = NursyColors.moss,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            items(insights) { insight ->
-                InsightCard(insight)
+            item { SectionTitle(title = "Local insights", action = "${insights.size} active") }
+            items(insights, key = { it.id }) { insight ->
+                InsightCard(insight = insight)
             }
         }
 
-        // Active Symptoms
         if (symptoms.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Active Symptoms",
-                    color = NursyColors.moss,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            items(symptoms) { symptom ->
-                SymptomSummaryCard(
-                    name = symptom.name,
-                    severity = symptom.severity,
-                    duration = symptom.durationHours
-                )
+            item { SectionTitle(title = "Active symptoms", action = "${symptoms.size} logged") }
+            items(symptoms, key = { it.id }) { symptom ->
+                SymptomSummaryCard(symptom)
             }
         }
 
-        // Active Medications
         if (medications.isNotEmpty()) {
-            item {
-                Text(
-                    text = "Active Medications",
-                    color = NursyColors.moss,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-            }
-            items(medications) { medication ->
-                MedicationSummaryCard(
-                    name = medication.name,
-                    dose = medication.dose,
-                    frequency = medication.frequency
-                )
+            item { SectionTitle(title = "Medications", action = "${medications.size} active") }
+            items(medications, key = { it.id }) { medication ->
+                MedicationSummaryCard(medication)
             }
         }
 
-        // Empty state
         if (checkIn == null && symptoms.isEmpty() && medications.isEmpty()) {
             item {
-                EmptyDashboardCard()
+                EmptyStateCard(
+                    title = "Start with one record",
+                    message = "Log a check-in, symptom, or medication. Nursy AI will build your offline dashboard from local data."
+                )
             }
         }
     }
@@ -137,90 +174,38 @@ fun DashboardScreen(viewModel: NursyViewModel) {
 
 @Composable
 private fun HealthScoreCard(
-    checkIn: com.nursyai.data.local.entity.DailyCheckInEntity?,
-    symptoms: List<com.nursyai.data.local.entity.SymptomEntity>,
-    medications: List<com.nursyai.data.local.entity.MedicationEntity>
+    checkIn: DailyCheckInEntity?,
+    symptoms: List<SymptomEntity>
 ) {
-    // Simple local score calculation
     val sleepScore = ((checkIn?.sleepHours ?: 0.0) / 8.0).coerceAtMost(1.0) * 20
     val energyScore = ((checkIn?.energyLevel ?: 5) / 10.0) * 20
-    val stressScore = kotlin.math.max(0, (5 - (checkIn?.stressLevel ?: 3)) / 5.0) * 15
+    val stressScore = kotlin.math.max(0.0, (5 - (checkIn?.stressLevel ?: 3)) / 5.0) * 15
     val hydrationScore = ((checkIn?.waterIntakeMl ?: 0) / 2000.0).coerceAtMost(1.0) * 15
     val symptomPenalty = symptoms.sumOf { it.severity * 3 }
-    val totalScore = kotlin.math.max(0, kotlin.math.min(100,
-        (sleepScore + energyScore + stressScore + hydrationScore - symptomPenalty).toInt()
-    ))
+    val score = (sleepScore + energyScore + stressScore + hydrationScore - symptomPenalty)
+        .toInt()
+        .coerceIn(0, 100)
 
-    androidx.compose.material3.Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = NursyColors.surface,
-        shape = RoundedCornerShape(12.dp),
-        tonalElevation = 2.dp
-    ) {
+    NursyCard {
         Row(
-            modifier = Modifier.padding(18.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(18.dp)
         ) {
-            // Score ring
-            androidx.compose.foundation.layout.Box(
-                modifier = Modifier.size(80.dp)
+            ScoreRing(score = score)
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                val angle = totalScore * 3.6f
-                androidx.compose.foundation.Canvas(modifier = Modifier.size(80.dp)) {
-                    val strokeWidth = 8.dp.toPx()
-                    drawArc(
-                        color = NursyColors.mint,
-                        startAngle = -90f,
-                        sweepAngle = angle,
-                        useCenter = false,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(strokeWidth)
-                    )
-                    drawArc(
-                        color = NursyColors.cloud,
-                        startAngle = -90f + angle,
-                        sweepAngle = 360f - angle,
-                        useCenter = false,
-                        style = androidx.compose.ui.graphics.drawscope.Stroke(strokeWidth)
-                    )
-                }
-                Text(
-                    text = "$totalScore",
-                    color = NursyColors.ink,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.align(Alignment.Center)
-                )
-            }
-
-            Spacer(modifier = Modifier.width(18.dp))
-
-            Column {
+                StatusPill(text = scoreLabel(score))
                 Text(
                     text = "Health score",
-                    color = NursyColors.moss,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleLarge
                 )
                 Text(
-                    text = when {
-                        totalScore >= 80 -> "Good"
-                        totalScore >= 60 -> "Stable"
-                        totalScore >= 40 -> "Concerning"
-                        else -> "Needs attention"
-                    },
-                    color = NursyColors.ink,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.SemiBold
-                )
-                val insight = when {
-                    checkIn?.sleepHours != null && checkIn.sleepHours < 6 -> "Low sleep detected"
-                    symptomPenalty > 10 -> "Multiple symptoms active"
-                    else -> "All metrics stable"
-                }
-                Text(
-                    text = insight,
-                    color = NursyColors.inkMuted,
-                    fontSize = 14.sp
+                    text = scoreMessage(score, checkIn, symptomPenalty),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -228,94 +213,86 @@ private fun HealthScoreCard(
 }
 
 @Composable
-private fun QuickMetricRow(sleepHours: Double, waterIntake: Int) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(12.dp)
+private fun ScoreRing(score: Int) {
+    Box(
+        modifier = Modifier.size(92.dp),
+        contentAlignment = Alignment.Center
     ) {
-        QuickMetricCard(label = "Sleep", value = "${sleepHours} h", Modifier.weight(1f))
-        QuickMetricCard(label = "Water", value = "$waterIntake ml", Modifier.weight(1f))
-        QuickMetricCard(
-            label = "Energy",
-            value = "—",
-            Modifier.weight(1f)
+        Canvas(modifier = Modifier.size(92.dp)) {
+            val strokeWidth = 9.dp.toPx()
+            drawArc(
+                color = NursyColors.cloud,
+                startAngle = -90f,
+                sweepAngle = 360f,
+                useCenter = false,
+                style = Stroke(strokeWidth, cap = StrokeCap.Round)
+            )
+            drawArc(
+                color = when {
+                    score >= 80 -> NursyColors.mint
+                    score >= 60 -> NursyColors.moss
+                    score >= 40 -> NursyColors.amber
+                    else -> NursyColors.coral
+                },
+                startAngle = -90f,
+                sweepAngle = score * 3.6f,
+                useCenter = false,
+                style = Stroke(strokeWidth, cap = StrokeCap.Round)
+            )
+        }
+        Text(
+            text = score.toString(),
+            color = MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.headlineMedium
         )
     }
 }
 
-@Composable
-private fun QuickMetricCard(label: String, value: String, modifier: Modifier = Modifier) {
-    androidx.compose.material3.Surface(
-        modifier = modifier,
-        color = NursyColors.surface,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 1.dp
-    ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Text(text = label, color = NursyColors.inkMuted, fontSize = 13.sp)
-            Text(
-                text = value,
-                color = NursyColors.ink,
-                fontSize = 22.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
+private fun scoreLabel(score: Int): String = when {
+    score >= 80 -> "Good"
+    score >= 60 -> "Stable"
+    score >= 40 -> "Watch"
+    else -> "Needs attention"
+}
+
+private fun scoreMessage(score: Int, checkIn: DailyCheckInEntity?, symptomPenalty: Int): String = when {
+    checkIn == null -> "No check-in yet. Add today's baseline to personalize this score."
+    checkIn.sleepHours < 6 -> "Low sleep is affecting today's score."
+    symptomPenalty > 10 -> "Active symptoms are pulling the score down."
+    score >= 80 -> "Your local metrics look steady today."
+    else -> "Keep tracking today so patterns become clearer."
 }
 
 @Composable
-private fun InsightCard(insight: String) {
-    androidx.compose.material3.Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = Color(0xFFFFFBF0),
-        shape = RoundedCornerShape(8.dp)
-    ) {
-        Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.size(8.dp),
-                color = NursyColors.amber,
-                shape = RoundedCornerShape(50)
-            ) {}
-            Text(
-                text = insight,
-                color = NursyColors.ink,
-                fontSize = 14.sp,
-                modifier = Modifier.padding(start = 10.dp)
-            )
-        }
+private fun InsightCard(insight: HealthInsight) {
+    val (container, accent) = when (insight.severity) {
+        InsightSeverity.INFO -> NursyColors.mintSoft to NursyColors.moss
+        InsightSeverity.WARNING -> NursyColors.amberSoft to NursyColors.amber
+        InsightSeverity.ALERT -> NursyColors.coralSoft to NursyColors.coral
     }
-}
 
-@Composable
-private fun SymptomSummaryCard(name: String, severity: Int, duration: Int?) {
-    androidx.compose.material3.Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = NursyColors.surface,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 1.dp
-    ) {
+    NursyCard(containerColor = container) {
         Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.Top,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.size(8.dp),
-                color = when {
-                    severity >= 4 -> NursyColors.coral
-                    severity >= 2 -> NursyColors.amber
-                    else -> NursyColors.mint
-                },
-                shape = RoundedCornerShape(50)
+            Surface(
+                modifier = Modifier
+                    .padding(top = 5.dp)
+                    .size(9.dp),
+                color = accent,
+                shape = CircleShape
             ) {}
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                Text(text = name, color = NursyColors.ink, fontWeight = FontWeight.SemiBold)
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
-                    text = "Severity: $severity/5${duration?.let { " · ${it}h duration" } ?: ""}",
-                    color = NursyColors.inkMuted,
-                    fontSize = 13.sp
+                    text = insight.title,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = insight.message,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
         }
@@ -323,62 +300,77 @@ private fun SymptomSummaryCard(name: String, severity: Int, duration: Int?) {
 }
 
 @Composable
-private fun MedicationSummaryCard(name: String, dose: String, frequency: String) {
-    androidx.compose.material3.Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = NursyColors.surface,
-        shape = RoundedCornerShape(8.dp),
-        tonalElevation = 1.dp
-    ) {
+private fun SymptomSummaryCard(symptom: SymptomEntity) {
+    NursyCard {
         Row(
-            modifier = Modifier.padding(14.dp),
-            verticalAlignment = Alignment.CenterVertically
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
-            androidx.compose.material3.Surface(
-                modifier = Modifier.size(36.dp),
-                color = NursyColors.cloud,
-                shape = RoundedCornerShape(8.dp)
+            SeverityDot(severity = symptom.severity)
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = symptom.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "Severity ${symptom.severity}/5${symptom.durationHours?.let { ", ${it}h duration" } ?: ""}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MedicationSummaryCard(medication: MedicationEntity) {
+    val total = medication.takenCount + medication.missedCount
+    val adherence = if (total == 0) 100 else (medication.takenCount * 100 / total)
+
+    NursyCard {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Surface(
+                modifier = Modifier.size(42.dp),
+                color = NursyColors.mintSoft,
+                shape = RoundedCornerShape(12.dp)
             ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Text(text = "Rx", color = NursyColors.moss, fontWeight = FontWeight.Bold)
+                }
+            }
+            Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "💊",
-                    modifier = Modifier.align(Alignment.Center)
+                    text = medication.name,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    style = MaterialTheme.typography.titleMedium
+                )
+                Text(
+                    text = "${medication.dose} - ${medication.frequency}",
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
                 )
             }
-            Column(modifier = Modifier.padding(start = 10.dp)) {
-                Text(text = name, color = NursyColors.ink, fontWeight = FontWeight.SemiBold)
-                Text(
-                    text = "$dose · $frequency",
-                    color = NursyColors.inkMuted,
-                    fontSize = 13.sp
-                )
-            }
+            StatusPill(
+                text = "$adherence%",
+                containerColor = if (adherence >= 80) NursyColors.mintSoft else NursyColors.amberSoft
+            )
         }
     }
 }
 
 @Composable
-private fun EmptyDashboardCard() {
-    androidx.compose.material3.Surface(
-        modifier = Modifier.fillMaxWidth(),
-        color = NursyColors.cloud,
-        shape = RoundedCornerShape(12.dp)
-    ) {
-        Column(
-            modifier = Modifier.padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = "Welcome to Nursy AI",
-                color = NursyColors.ink,
-                fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = "Start by logging your first check-in, symptom, or medication. All data stays private on your device.",
-                color = NursyColors.inkMuted,
-                fontSize = 14.sp
-            )
-        }
-    }
+private fun SeverityDot(severity: Int) {
+    Surface(
+        modifier = Modifier.size(10.dp),
+        color = when {
+            severity >= 4 -> NursyColors.coral
+            severity >= 2 -> NursyColors.amber
+            else -> NursyColors.mint
+        },
+        shape = CircleShape
+    ) {}
 }

@@ -1,156 +1,176 @@
 package com.nursyai.ui.screens
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.nursyai.ui.NursyViewModel
+import com.nursyai.ui.components.NursyCard
+import com.nursyai.ui.components.NursyScreen
+import com.nursyai.ui.components.PrimaryActionButton
+import com.nursyai.ui.components.SectionTitle
+import com.nursyai.ui.components.StatusPill
 import com.nursyai.ui.theme.NursyColors
 
 @Composable
 fun ProfileScreen(viewModel: NursyViewModel) {
     val profile by viewModel.profile.collectAsState()
 
-    var fullName by remember { mutableStateOf(profile?.fullName ?: "") }
-    var dateOfBirth by remember { mutableStateOf(profile?.dateOfBirth ?: "") }
-    var gender by remember { mutableStateOf(profile?.gender ?: "") }
-    var weightKg by remember { mutableStateOf(profile?.weightKg?.toString() ?: "") }
-    var heightCm by remember { mutableStateOf(profile?.heightCm?.toString() ?: "") }
-    var bloodType by remember { mutableStateOf(profile?.bloodType ?: "") }
-    var allergies by remember { mutableStateOf(profile?.allergies ?: "") }
-    var chronicConditions by remember { mutableStateOf(profile?.chronicConditions ?: "") }
+    var fullName by rememberSaveable { mutableStateOf("") }
+    var dateOfBirth by rememberSaveable { mutableStateOf("") }
+    var gender by rememberSaveable { mutableStateOf("") }
+    var weightKg by rememberSaveable { mutableStateOf("") }
+    var heightCm by rememberSaveable { mutableStateOf("") }
+    var bloodType by rememberSaveable { mutableStateOf("") }
+    var allergies by rememberSaveable { mutableStateOf("") }
+    var chronicConditions by rememberSaveable { mutableStateOf("") }
+    var loadedProfileId by rememberSaveable { mutableStateOf<String?>(null) }
 
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(NursyColors.background)
-            .padding(20.dp)
-            .verticalScroll(rememberScrollState()),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+    LaunchedEffect(profile?.id) {
+        val current = profile
+        if (current != null && loadedProfileId != current.id) {
+            fullName = current.fullName
+            dateOfBirth = current.dateOfBirth
+            gender = current.gender
+            weightKg = current.weightKg?.toString().orEmpty()
+            heightCm = current.heightCm?.toString().orEmpty()
+            bloodType = current.bloodType
+            allergies = current.allergies
+            chronicConditions = current.chronicConditions
+            loadedProfileId = current.id
+        }
+    }
+
+    NursyScreen(
+        eyebrow = "Identity and safety",
+        title = "Profile",
+        subtitle = "Store the health details Nursy AI uses for offline context and emergency display."
     ) {
-        Text(
-            text = "Profile",
-            color = NursyColors.ink,
-            fontSize = 28.sp,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = "Your health profile",
-            color = NursyColors.inkMuted,
-            fontSize = 14.sp
-        )
+        item {
+            NursyCard(containerColor = MaterialTheme.colorScheme.surfaceVariant) {
+                SectionTitle(title = "Profile status")
+                Text(
+                    text = if (profile == null) {
+                        "No profile saved yet. Add basic information to personalize local context."
+                    } else {
+                        "Saved locally for offline use and queued for backup when sync is available."
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                StatusPill(
+                    text = if (profile == null) "Incomplete" else "Saved locally",
+                    containerColor = if (profile == null) NursyColors.amberSoft else NursyColors.mintSoft,
+                    contentColor = if (profile == null) NursyColors.ink else NursyColors.mossDark
+                )
+            }
+        }
 
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            color = NursyColors.surface,
-            shape = RoundedCornerShape(12.dp)
-        ) {
-            Column(modifier = Modifier.padding(16.dp)) {
+        item {
+            NursyCard {
+                SectionTitle(title = "Basic information")
                 OutlinedTextField(
                     value = fullName,
                     onValueChange = { fullName = it },
-                    label = { Text("Full Name") },
+                    label = { Text("Full name") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = dateOfBirth,
                     onValueChange = { dateOfBirth = it },
-                    label = { Text("Date of Birth (YYYY-MM-DD)") },
+                    label = { Text("Date of birth") },
+                    placeholder = { Text("YYYY-MM-DD") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = gender,
                     onValueChange = { gender = it },
                     label = { Text("Gender") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
+            }
+        }
 
-                OutlinedTextField(
-                    value = weightKg,
-                    onValueChange = { weightKg = it },
-                    label = { Text("Weight (kg)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
+        item {
+            NursyCard {
+                SectionTitle(title = "Measurements")
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = weightKg,
+                        onValueChange = { weightKg = it },
+                        label = { Text("Weight") },
+                        suffix = { Text("kg") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                    OutlinedTextField(
+                        value = heightCm,
+                        onValueChange = { heightCm = it },
+                        label = { Text("Height") },
+                        suffix = { Text("cm") },
+                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
 
-                OutlinedTextField(
-                    value = heightCm,
-                    onValueChange = { heightCm = it },
-                    label = { Text("Height (cm)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth()
-                )
-
+        item {
+            NursyCard {
+                SectionTitle(title = "Medical details")
                 OutlinedTextField(
                     value = bloodType,
                     onValueChange = { bloodType = it },
-                    label = { Text("Blood Type") },
+                    label = { Text("Blood type") },
+                    placeholder = { Text("O+") },
+                    singleLine = true,
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = allergies,
                     onValueChange = { allergies = it },
-                    label = { Text("Allergies (comma-separated)") },
+                    label = { Text("Allergies") },
+                    placeholder = { Text("Penicillin, peanuts") },
                     modifier = Modifier.fillMaxWidth()
                 )
-
                 OutlinedTextField(
                     value = chronicConditions,
                     onValueChange = { chronicConditions = it },
-                    label = { Text("Chronic Conditions (comma-separated)") },
+                    label = { Text("Chronic conditions") },
+                    placeholder = { Text("Asthma, diabetes") },
                     modifier = Modifier.fillMaxWidth()
                 )
-
-                Spacer(modifier = Modifier.height(16.dp))
-
-                Button(
+                PrimaryActionButton(
+                    text = "Save Profile",
                     onClick = {
                         viewModel.saveProfile(
-                            fullName = fullName,
-                            dateOfBirth = dateOfBirth,
-                            gender = gender,
+                            fullName = fullName.trim(),
+                            dateOfBirth = dateOfBirth.trim(),
+                            gender = gender.trim(),
                             weightKg = weightKg.toDoubleOrNull(),
                             heightCm = heightCm.toDoubleOrNull(),
-                            bloodType = bloodType,
-                            allergies = allergies,
-                            chronicConditions = chronicConditions
+                            bloodType = bloodType.trim(),
+                            allergies = allergies.trim(),
+                            chronicConditions = chronicConditions.trim()
                         )
-                    },
-                    modifier = Modifier.fillMaxWidth().height(48.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = NursyColors.moss)
-                ) {
-                    Text("Save Profile", fontWeight = FontWeight.SemiBold)
-                }
+                    }
+                )
             }
         }
     }
