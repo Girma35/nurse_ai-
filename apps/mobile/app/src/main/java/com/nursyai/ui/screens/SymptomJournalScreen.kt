@@ -35,7 +35,7 @@ import com.nursyai.ui.theme.NursyColors
 @Composable
 fun SymptomJournalScreen(viewModel: NursyViewModel) {
     var journalText by remember { mutableStateOf("") }
-    var parsedSymptoms by remember { mutableStateOf<List<Pair<String, Int>>>(emptyList()) }
+    var parsedSymptoms by remember { mutableStateOf<List<com.nursyai.ui.NursyViewModel.ParsedSymptomResult>>(emptyList()) }
     var hasParsed by remember { mutableStateOf(false) }
 
     Column(
@@ -79,18 +79,7 @@ fun SymptomJournalScreen(viewModel: NursyViewModel) {
                 Button(
                     onClick = {
                         if (journalText.isNotBlank()) {
-                            val extracted = viewModel.parseJournalNote(journalText)
-                            parsedSymptoms = extracted.map { name ->
-                                val severity = when (name.lowercase()) {
-                                    "headache" -> 3
-                                    "fever" -> 4
-                                    "fatigue" -> 2
-                                    "nausea" -> 3
-                                    "cough" -> 2
-                                    else -> 2
-                                }
-                                name.replaceFirstChar { it.uppercase() } to severity
-                            }
+                            parsedSymptoms = viewModel.parseJournalNote(journalText)
                             hasParsed = true
                         }
                     },
@@ -128,7 +117,7 @@ fun SymptomJournalScreen(viewModel: NursyViewModel) {
                         )
                     } else {
                         Spacer(modifier = Modifier.height(12.dp))
-                        parsedSymptoms.forEach { (name, severity) ->
+                        parsedSymptoms.forEach { symptom ->
                             Surface(
                                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
                                 color = NursyColors.cloud,
@@ -138,18 +127,18 @@ fun SymptomJournalScreen(viewModel: NursyViewModel) {
                                     modifier = Modifier.padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = name,
-                                            color = NursyColors.ink,
-                                            fontWeight = FontWeight.SemiBold
-                                        )
-                                        Text(
-                                            text = "Severity: $severity/5",
-                                            color = NursyColors.inkMuted,
-                                            fontSize = 13.sp
-                                        )
-                                    }
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = symptom.name,
+                                        color = NursyColors.ink,
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                    Text(
+                                        text = "Severity: ${symptom.severity}/5${symptom.durationHours?.let { " · ${it}h" } ?: ""}",
+                                        color = NursyColors.inkMuted,
+                                        fontSize = 13.sp
+                                    )
+                                }
                                 }
                             }
                         }

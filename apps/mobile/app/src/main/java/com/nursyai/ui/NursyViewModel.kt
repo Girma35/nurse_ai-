@@ -250,21 +250,30 @@ class NursyViewModel(application: Application) : AndroidViewModel(application) {
 
     // ─── Symptom journal parser ────────────────────────────────
 
-    fun parseJournalNote(note: String): List<String> {
-        return rulesEngine.extractSymptoms(note)
+    data class ParsedSymptomResult(val name: String, val severity: Int, val durationHours: Int?)
+
+    fun parseJournalNote(note: String): List<ParsedSymptomResult> {
+        return rulesEngine.parseJournalNote(note).map { parsed ->
+            ParsedSymptomResult(
+                name = parsed.name,
+                severity = parsed.severity,
+                durationHours = parsed.durationHours
+            )
+        }
     }
 
     fun saveParsedSymptoms(
-        symptoms: List<Pair<String, Int>>
+        symptoms: List<ParsedSymptomResult>
     ) {
         viewModelScope.launch {
-            for ((name, severity) in symptoms) {
+            for (symptom in symptoms) {
                 val entity = SymptomEntity(
                     id = UUID.randomUUID().toString(),
                     userId = demoUserId,
-                    name = name,
-                    severity = severity,
-                    startedAt = System.currentTimeMillis()
+                    name = symptom.name,
+                    severity = symptom.severity,
+                    startedAt = System.currentTimeMillis(),
+                    durationHours = symptom.durationHours
                 )
                 dao.upsertSymptom(entity)
             }

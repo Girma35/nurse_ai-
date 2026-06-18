@@ -147,6 +147,25 @@ interface HealthDao {
     @Query("SELECT * FROM emergency_contacts WHERE syncState != 'synced'")
     suspend fun pendingEmergencyContacts(): List<EmergencyContactEntity>
 
+    // Mark records as synced after successful cloud upload
+    @Query("UPDATE daily_check_ins SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markCheckInsSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE symptoms SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markSymptomsSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE medications SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markMedicationsSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE profiles SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markProfilesSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE emergency_contacts SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markEmergencyContactsSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
+    @Query("UPDATE medication_dose_events SET syncState = 'synced', updatedAt = :updatedAt WHERE id IN (:ids)")
+    suspend fun markDoseEventsSynced(ids: List<String>, updatedAt: Long = System.currentTimeMillis())
+
     // Sync status aggregated
     @Query("SELECT COUNT(*) FROM daily_check_ins WHERE syncState = 'queued'")
     suspend fun pendingCheckInCount(): Int

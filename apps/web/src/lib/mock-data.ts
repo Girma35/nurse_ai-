@@ -72,9 +72,11 @@ export const emergencyCard: EmergencyHealthCard = {
   conditions: ["Anemia"],
   emergencyContacts: [
     {
+      id: "ec-demo-1",
+      userId: "demo-user",
       name: "Dawit Bekele",
       relationship: "Brother",
-      phone: "+251 900 000 000"
+      phoneNumber: "+251 900 000 000"
     }
   ]
 };
