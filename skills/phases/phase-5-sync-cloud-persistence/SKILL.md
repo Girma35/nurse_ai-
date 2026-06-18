@@ -69,13 +69,13 @@ CloudFormation template with:
 - Mark records synced only after confirmed cloud persistence.
 - Never discard newer local data silently — conflict metadata enables server-side resolution.
 - Keep cloud failures non-destructive — local records are never deleted.
-- Keep web dashboard reads separate from mobile local source-of-truth behavior.
+- Keep cloud recovery reads separate from mobile local source-of-truth behavior.
 
 ## Exit Criteria
 
 - Local records sync when connectivity returns.
 - Sync failures are retried up to 3 times.
-- Dashboard can read synced records from the cloud layer.
+- Mobile can recover synced records from the cloud layer when needed.
 - Unsynced records are not re-uploaded after successful sync.
 
 ## Verify

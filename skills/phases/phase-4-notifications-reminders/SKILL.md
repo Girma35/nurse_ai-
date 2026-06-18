@@ -62,12 +62,12 @@ The `NursyViewModel.scheduleDoseEventsForMedication()` creates `MedicationDoseEv
 
 - Medication and check-in reminders work locally via AlarmManager.
 - Medication adherence is calculated from dose events.
-- Missed dose state appears in the dashboard.
+- Missed dose state appears in the mobile dashboard.
 - Permissions are handled gracefully on all Android versions.
 
 ## Verify
 
 - Confirm schedule, update, and cancel paths for medication reminders.
 - Confirm adherence changes after taken and missed dose events.
-- Confirm dashboard displays missed dose state.
+- Confirm the mobile dashboard displays missed dose state.
 - Confirm permission-denied state shows no crashes.

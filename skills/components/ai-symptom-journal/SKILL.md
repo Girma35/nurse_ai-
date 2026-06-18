@@ -78,7 +78,9 @@ Detects words before symptom: `severe`→5, `quite`/`pretty`→4, `moderate`→3
 
 - **Deterministic only**: The parser uses keyword matching, not ML. All behaviors are testable.
 - **Review gate**: Users always review extracted symptoms before saving. Any can be discarded.
-- **No diagnosis**: Avoid diagnosis, treatment instructions, or high-confidence medical claims. Frame as "detected symptoms" for user review.
+- **No diagnosis**: Avoid diagnosis, disease prediction, treatment instructions, or high-confidence medical claims. Frame output as "detected symptoms" for user review.
+- **Safe wording**: Use phrases like "Here is a summary of your symptoms" and "No diagnosis is provided, only tracking insights".
+- **Forbidden wording**: Do not write "you may have disease X", "this is likely diabetes/depression/infection", prescribing instructions, or emergency diagnosis claims.
 - **Original text**: Preserve original journal entry context (stored in SymptomEntity.notes if needed).
 - **Unknown input**: If no known symptoms are detected, the screen shows "No known symptoms detected" and examples.
 - **Example texts**: Screen shows examples like "I feel tired and have headache for 3 days", "Woke up with fever and cough", "Mild nausea after eating".
