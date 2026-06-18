@@ -75,7 +75,7 @@ class LocalRulesEngine {
                         id = "low-sleep",
                         severity = InsightSeverity.WARNING,
                         title = "Low Sleep Detected",
-                        message = "You slept ${checkIn.sleepHours} hours. Low sleep may contribute to fatigue and lower energy. Aim for 7-9 hours.",
+                        message = "You slept ${checkIn.sleepHours} hours. This is a sleep pattern worth tracking alongside energy and fatigue.",
                         sourceRecordIds = listOf(checkIn.id)
                     )
                 )
@@ -101,7 +101,7 @@ class LocalRulesEngine {
                         id = "sleep-fatigue-combo",
                         severity = InsightSeverity.WARNING,
                         title = "Sleep & Fatigue Connection",
-                        message = "Low sleep combined with fatigue symptoms suggests rest quality may need attention.",
+                        message = "Low sleep and fatigue appeared together. You might want to mention this pattern at your next appointment if it continues.",
                         sourceRecordIds = listOf(checkIn.id)
                     )
                 )
@@ -123,7 +123,7 @@ class LocalRulesEngine {
                     id = "repeated-symptom-$symptomName",
                     severity = if (count >= 4) InsightSeverity.ALERT else InsightSeverity.WARNING,
                     title = "Repeated $symptomName",
-                    message = "$symptomName has been logged $count times recently. Watch the trend and consult a professional if it persists.",
+                    message = "$symptomName has been logged $count times recently. This is a pattern worth reviewing with a doctor if it continues.",
                     sourceRecordIds = matchingSymptoms.map { it.id }
                 )
             )
@@ -139,7 +139,7 @@ class LocalRulesEngine {
                     id = "high-severity-symptoms",
                     severity = InsightSeverity.ALERT,
                     title = "High Severity Symptoms",
-                    message = "$names are at high severity (4-5/5). Monitor closely and seek medical attention if needed.",
+                    message = "Here is a summary of your high-severity symptoms: $names. No diagnosis is provided, only tracking insights.",
                     sourceRecordIds = highSeveritySymptoms.map { it.id }
                 )
             )
@@ -153,7 +153,7 @@ class LocalRulesEngine {
                     id = "multiple-symptoms",
                     severity = InsightSeverity.WARNING,
                     title = "Multiple Active Symptoms",
-                    message = "You have ${activeSymptoms.size} active symptoms. This may indicate an underlying pattern worth discussing with a healthcare provider.",
+                    message = "You have ${activeSymptoms.size} active symptoms. This summary may be useful to mention at your next appointment.",
                     sourceRecordIds = activeSymptoms.map { it.id }
                 )
             )
@@ -170,7 +170,7 @@ class LocalRulesEngine {
                         id = "low-hydration",
                         severity = InsightSeverity.WARNING,
                         title = "Low Water Intake",
-                        message = "You've had ${checkIn.waterIntakeMl}ml of water today. Consider increasing intake toward the daily goal of 2000ml.",
+                        message = "You've logged ${checkIn.waterIntakeMl}ml of water today. Keep tracking hydration so patterns are easier to review.",
                         sourceRecordIds = listOf(checkIn.id)
                     )
                 )
@@ -196,7 +196,7 @@ class LocalRulesEngine {
                         id = "high-stress",
                         severity = InsightSeverity.WARNING,
                         title = "High Stress Level",
-                        message = "Your stress level is ${checkIn.stressLevel}/10. Consider relaxation techniques or a short break.",
+                        message = "Your stress level is ${checkIn.stressLevel}/10. Keep this in your summary so stress patterns are easier to review.",
                         sourceRecordIds = listOf(checkIn.id)
                     )
                 )
@@ -215,51 +215,56 @@ class LocalRulesEngine {
         val normalized = note.lowercase().trim()
         val parsed = mutableListOf<ParsedSymptom>()
 
-        // Known symptom keywords with default severity
-        val symptomKeywords = mapOf(
-            "headache" to 3,
-            "head" to 2,
-            "migraine" to 4,
-            "fever" to 4,
-            "temperature" to 3,
-            "fatigue" to 2,
-            "tired" to 2,
-            "exhausted" to 3,
-            "nausea" to 3,
-            "vomiting" to 4,
-            "cough" to 2,
-            "sore throat" to 2,
-            "runny nose" to 1,
-            "congestion" to 2,
-            "body ache" to 3,
-            "muscle pain" to 3,
-            "joint pain" to 3,
-            "dizziness" to 3,
-            "chest pain" to 5,
-            "shortness of breath" to 5,
-            "rash" to 2,
-            "itching" to 2,
-            "bloating" to 2,
-            "cramps" to 3,
-            "diarrhea" to 3,
-            "constipation" to 2,
-            "anxiety" to 3,
-            "insomnia" to 3,
-            "chills" to 3,
-            "sweating" to 2,
-            "back pain" to 3,
-            "neck pain" to 3
+        data class SymptomKeyword(
+            val keyword: String,
+            val displayName: String = keyword.replaceFirstChar { it.uppercase() },
+            val defaultSeverity: Int
         )
 
-        // Check for multi-word symptoms first
-        for ((keyword, defaultSeverity) in symptomKeywords.entries.sortedByDescending { it.key.length }) {
-            if (normalized.contains(keyword) && parsed.none { it.name == keyword }) {
-                val severity = extractSeverityHint(normalized, keyword) ?: defaultSeverity
-                val duration = extractDuration(normalized, keyword)
+        val symptomKeywords = listOf(
+            SymptomKeyword("headache", defaultSeverity = 3),
+            SymptomKeyword("head", defaultSeverity = 2),
+            SymptomKeyword("migraine", defaultSeverity = 4),
+            SymptomKeyword("fever", defaultSeverity = 4),
+            SymptomKeyword("temperature", defaultSeverity = 3),
+            SymptomKeyword("fatigue", defaultSeverity = 2),
+            SymptomKeyword("tired", displayName = "Fatigue", defaultSeverity = 2),
+            SymptomKeyword("exhausted", displayName = "Fatigue", defaultSeverity = 3),
+            SymptomKeyword("nausea", defaultSeverity = 3),
+            SymptomKeyword("vomiting", defaultSeverity = 4),
+            SymptomKeyword("cough", defaultSeverity = 2),
+            SymptomKeyword("sore throat", defaultSeverity = 2),
+            SymptomKeyword("runny nose", defaultSeverity = 1),
+            SymptomKeyword("congestion", defaultSeverity = 2),
+            SymptomKeyword("body ache", defaultSeverity = 3),
+            SymptomKeyword("muscle pain", defaultSeverity = 3),
+            SymptomKeyword("joint pain", defaultSeverity = 3),
+            SymptomKeyword("dizziness", defaultSeverity = 3),
+            SymptomKeyword("chest pain", defaultSeverity = 5),
+            SymptomKeyword("shortness of breath", defaultSeverity = 5),
+            SymptomKeyword("rash", defaultSeverity = 2),
+            SymptomKeyword("itching", defaultSeverity = 2),
+            SymptomKeyword("bloating", defaultSeverity = 2),
+            SymptomKeyword("cramps", defaultSeverity = 3),
+            SymptomKeyword("diarrhea", defaultSeverity = 3),
+            SymptomKeyword("constipation", defaultSeverity = 2),
+            SymptomKeyword("anxiety", defaultSeverity = 3),
+            SymptomKeyword("insomnia", defaultSeverity = 3),
+            SymptomKeyword("chills", defaultSeverity = 3),
+            SymptomKeyword("sweating", defaultSeverity = 2),
+            SymptomKeyword("back pain", defaultSeverity = 3),
+            SymptomKeyword("neck pain", defaultSeverity = 3)
+        )
+
+        for (entry in symptomKeywords.sortedByDescending { it.keyword.length }) {
+            val keywordPattern = Regex("\\b${Regex.escape(entry.keyword)}\\b", RegexOption.IGNORE_CASE)
+            if (keywordPattern.containsMatchIn(normalized) && parsed.none { it.name == entry.displayName }) {
+                val severity = extractSeverityHint(normalized, entry.keyword) ?: entry.defaultSeverity
+                val duration = extractDuration(normalized, entry.keyword)
 
                 parsed.add(
                     ParsedSymptom(
-                        name = keyword.replaceFirstChar { it.uppercase() },
+                        name = entry.displayName,
                         severity = severity.coerceIn(1, 5),
                         durationHours = duration
                     )

@@ -32,7 +32,8 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-1", userId = "u1", date = "2026-06-17",
             mood = "steady", energyLevel = 5, sleepHours = 5.0,
-            sleepQuality = "poor", stressLevel = 5, waterIntakeMl = 1000
+            sleepQuality = "poor", stressLevel = 5, waterIntakeMl = 1000,
+            notes = null
         )
         val results = engine.insights(checkIn, emptyList())
         assertTrue(results.any { it.id == "low-sleep" })
@@ -44,7 +45,8 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-2", userId = "u1", date = "2026-06-17",
             mood = "great", energyLevel = 8, sleepHours = 8.5,
-            sleepQuality = "excellent", stressLevel = 2, waterIntakeMl = 2000
+            sleepQuality = "excellent", stressLevel = 2, waterIntakeMl = 2000,
+            notes = null
         )
         val results = engine.insights(checkIn, emptyList())
         assertTrue(results.any { it.id == "good-sleep" })
@@ -98,7 +100,8 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-1", userId = "u1", date = "2026-06-17",
             mood = "low", energyLevel = 3, sleepHours = 5.0,
-            sleepQuality = "poor", stressLevel = 6, waterIntakeMl = 800
+            sleepQuality = "poor", stressLevel = 6, waterIntakeMl = 800,
+            notes = null
         )
         val symptoms = listOf(
             SymptomEntity(id = "s1", userId = "u1", name = "Fatigue", severity = 3, startedAt = 1000)
@@ -112,7 +115,8 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-old", userId = "u1", date = "2026-06-15",
             mood = "steady", energyLevel = 5, sleepHours = 7.0,
-            sleepQuality = "good", stressLevel = 3, waterIntakeMl = 1500
+            sleepQuality = "good", stressLevel = 3, waterIntakeMl = 1500,
+            notes = null
         )
         val results = engine.insights(null, emptyList(), listOf(checkIn))
         // With the rule ordering fix, missed-checkin is checked before the no-data guard
@@ -125,7 +129,8 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-1", userId = "u1", date = "2026-06-17",
             mood = "steady", energyLevel = 5, sleepHours = 7.0,
-            sleepQuality = "good", stressLevel = 3, waterIntakeMl = 500
+            sleepQuality = "good", stressLevel = 3, waterIntakeMl = 500,
+            notes = null
         )
         val results = engine.insights(checkIn, emptyList())
         assertTrue(results.any { it.id == "low-hydration" })
@@ -136,10 +141,44 @@ class LocalRulesEngineTest {
         val checkIn = DailyCheckInEntity(
             id = "ci-1", userId = "u1", date = "2026-06-17",
             mood = "down", energyLevel = 4, sleepHours = 6.0,
-            sleepQuality = "poor", stressLevel = 8, waterIntakeMl = 1000
+            sleepQuality = "poor", stressLevel = 8, waterIntakeMl = 1000,
+            notes = null
         )
         val results = engine.insights(checkIn, emptyList())
         assertTrue(results.any { it.id == "high-stress" })
+    }
+
+    @Test
+    fun `insight wording stays in tracking category`() {
+        val checkIn = DailyCheckInEntity(
+            id = "ci-safe", userId = "u1", date = "2026-06-17",
+            mood = "down", energyLevel = 3, sleepHours = 5.0,
+            sleepQuality = "poor", stressLevel = 8, waterIntakeMl = 500,
+            notes = null
+        )
+        val symptoms = listOf(
+            SymptomEntity(id = "s1", userId = "u1", name = "Headache", severity = 5, startedAt = 1000),
+            SymptomEntity(id = "s2", userId = "u1", name = "Headache", severity = 4, startedAt = 2000),
+            SymptomEntity(id = "s3", userId = "u1", name = "Fatigue", severity = 3, startedAt = 3000)
+        )
+        val forbiddenPhrases = listOf(
+            "you may have",
+            "likely diabetes",
+            "likely depression",
+            "likely infection",
+            "prescribe",
+            "treatment",
+            "seek medical attention",
+            "underlying"
+        )
+
+        val combinedText = engine.insights(checkIn, symptoms)
+            .joinToString(" ") { "${it.title} ${it.message}" }
+            .lowercase()
+
+        forbiddenPhrases.forEach { phrase ->
+            assertFalse("Unexpected medical wording: $phrase", combinedText.contains(phrase))
+        }
     }
 
     // ─── Journal Parser Tests ─────────────────────────────────

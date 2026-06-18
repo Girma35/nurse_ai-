@@ -3,6 +3,7 @@ package com.nursyai.sync
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.Json
 import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
@@ -83,7 +84,7 @@ class SyncApiClient(
     suspend fun batchUpsert(records: List<SyncPayload>): Result<SyncResponse> {
         return withContext(Dispatchers.IO) {
             try {
-                val body = json.encodeToString(records)
+                val body = json.encodeToString(ListSerializer(SyncPayload.serializer()), records)
                     .toRequestBody(mediaType)
 
                 val request = Request.Builder()
@@ -129,7 +130,7 @@ class SyncApiClient(
 
                 val response = client.newCall(request).execute()
                 val responseBody = response.body?.string() ?: "[]"
-                val records = json.decodeFromString<List<SyncPayload>>(responseBody)
+                val records = json.decodeFromString(ListSerializer(SyncPayload.serializer()), responseBody)
 
                 Result.success(records)
             } catch (e: Exception) {
