@@ -15,6 +15,7 @@ data class DailyCheckInEntity(
     val stressLevel: Int,
     val waterIntakeMl: Int,
     val notes: String?,
-    val syncState: String = "queued",
-    val updatedAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val syncState: String = "queued"
 )

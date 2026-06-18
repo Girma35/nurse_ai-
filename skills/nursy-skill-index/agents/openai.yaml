@@ -1,0 +1,4 @@
+interface:
+  display_name: "Nursy Skill Index"
+  short_description: "Route Nursy tasks to component and phase skills"
+  default_prompt: "Use the Nursy skill index to choose the right component or phase skill for this task."

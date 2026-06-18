@@ -10,8 +10,10 @@ data class SymptomEntity(
     val name: String,
     val severity: Int,
     val startedAt: Long,
-    val durationHours: Int?,
-    val notes: String?,
-    val syncState: String = "queued",
-    val updatedAt: Long = System.currentTimeMillis()
+    val durationHours: Int? = null,
+    val notes: String? = null,
+    val active: Boolean = true,
+    val createdAt: Long = System.currentTimeMillis(),
+    val updatedAt: Long = System.currentTimeMillis(),
+    val syncState: String = "queued"
 )
